@@ -175,6 +175,38 @@ it('returns an error on bad password', (done) => {
 
         server.inject(request, (res) => {
 
+            expect(res.headers['www-authenticate']).to.equal('Basic error="Bad username or password"');
+            expect(res.statusCode).to.equal(401);
+            done();
+        });
+    });
+});
+
+it('returns an error on bad password without www-authenticate header', (done) => {
+
+    const server = new Hapi.Server();
+    server.connection();
+    server.register(require('../'), (err) => {
+
+        expect(err).to.not.exist();
+        server.auth.strategy('default', 'basic', 'required', { validateFunc: internals.user });
+        server.route({
+            method: 'POST',
+            path: '/',
+            handler: function (request, reply) {
+
+                return reply('ok');
+            },
+            config: {
+                auth: 'default'
+            }
+        });
+
+        const request = { method: 'POST', url: '/', headers: { authorization: internals.header('john', 'abcd'), 'X-Requested-With': 'XMLHttpRequest' } };
+
+        server.inject(request, (res) => {
+
+            expect(res.headers['www-authenticate']).to.equal(undefined);
             expect(res.statusCode).to.equal(401);
             done();
         });
