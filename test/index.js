@@ -148,6 +148,8 @@ it('returns a reply on failed optional auth', (done) => {
             expect(res.result).to.equal('ok');
             done();
         });
+
+
     });
 });
 
@@ -308,6 +310,38 @@ it('returns an error on missing username', (done) => {
     });
 });
 
+it('returns an error on missing username without www-authenticate header', (done) => {
+
+    const server = new Hapi.Server();
+    server.connection();
+    server.register(require('../'), (err) => {
+
+        expect(err).to.not.exist();
+        server.auth.strategy('default', 'basic', 'required', { validateFunc: internals.user });
+        server.route({
+            method: 'POST',
+            path: '/',
+            handler: function (request, reply) {
+
+                return reply('ok');
+            },
+            config: {
+                auth: 'default'
+            }
+        });
+
+        const request = { method: 'POST', url: '/', headers: { authorization: internals.header('', ''), 'X-Requested-With': 'XMLHttpRequest'  } };
+
+        server.inject(request, (res) => {
+
+            expect(res.result).to.exist();
+            expect(res.headers['www-authenticate']).to.equal(undefined);
+            expect(res.statusCode).to.equal(401);
+            done();
+        });
+    });
+});
+
 it('allow missing username', (done) => {
 
     const server = new Hapi.Server();
@@ -369,6 +403,38 @@ it('returns an error on unknown user', (done) => {
         server.inject(request, (res) => {
 
             expect(res.result).to.exist();
+            expect(res.statusCode).to.equal(401);
+            done();
+        });
+    });
+});
+
+it('returns an error on unknown user without www-authenticate header', (done) => {
+
+    const server = new Hapi.Server();
+    server.connection();
+    server.register(require('../'), (err) => {
+
+        expect(err).to.not.exist();
+        server.auth.strategy('default', 'basic', 'required', { validateFunc: internals.user });
+        server.route({
+            method: 'POST',
+            path: '/',
+            handler: function (request, reply) {
+
+                return reply('ok');
+            },
+            config: {
+                auth: 'default'
+            }
+        });
+
+        const request = { method: 'POST', url: '/', headers: { authorization: internals.header('doe', '123:45'), 'X-Requested-With': 'XMLHttpRequest' } };
+
+        server.inject(request, (res) => {
+
+            expect(res.result).to.exist();
+            expect(res.headers['www-authenticate']).to.equal(undefined);
             expect(res.statusCode).to.equal(401);
             done();
         });
@@ -603,7 +669,6 @@ it('should ask for credentials if server has one default strategy', (done) => {
         });
     });
 });
-
 
 it('cannot add a route that has payload validation required', (done) => {
 
